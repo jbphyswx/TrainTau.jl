@@ -21,12 +21,12 @@ end
 SOCRATES_truth_link = "https://caltech.box.com/shared/static/pwhfmx3hkjjii45gteoegpnfqkjplmgd.pickle" # On Box @ Research_Schneider/Projects/Microphysics # Remember to sync to SOCRATESSingleColumnForcings.jl (the small file)
 SOCRATES_truth_jl_save_path = joinpath(package_dir, "SOCRATES_Truth_Data.jld2")
 
-@info("Retrieving and Saving SOCRATES truth/verification Data") # need to uncomment to update data
-using Pickle
-SOCRATES_truth_save_path = joinpath(package_dir, "SOCRATES_Truth_Data.pickle")
-SOCRATES_truth_data = download(SOCRATES_truth_link, SOCRATES_truth_save_path)
-socrates_truth = Pickle.load(open(SOCRATES_truth_save_path); proto = 5)
-JLD2.save_object(SOCRATES_truth_jl_save_path, socrates_truth)
+# @info("Retrieving and Saving SOCRATES truth/verification Data") # need to uncomment to update data
+# using Pickle
+# SOCRATES_truth_save_path = joinpath(package_dir, "SOCRATES_Truth_Data.pickle")
+# SOCRATES_truth_data = download(SOCRATES_truth_link, SOCRATES_truth_save_path)
+# socrates_truth = Pickle.load(open(SOCRATES_truth_save_path); proto = 5)
+# JLD2.save_object(SOCRATES_truth_jl_save_path, socrates_truth)
 
 
 
