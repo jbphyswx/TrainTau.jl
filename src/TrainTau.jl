@@ -30,5 +30,5 @@ include("SOCRATES/run_all_SOCRATES.jl")
 include("SOCRATES/loss_SOCRATES.jl")
 include("SOCRATES/SOCRATES_Workflow.jl")
 include("SOCRATES/slurm_parallel_test.jl")
-
+include("SOCRATES/reconstruct_loss.jl")
 end # module TrainTau
