@@ -32,14 +32,19 @@ function grid_search_optimize(;output_save_path=nothing,sysimage=false, save=tru
 
 
     # Initialize Weights
+    res = 2 # test
     res = 10
     tau = (;liq=range(0.3,5,res), ice=range(0.3,5,res)) # log space weights
+    # tau = (;liq=[1], ice=[1]) # log space weights EQUIL 
+
     sz_tau = (x->size(x)[1]).(values(tau)) 
 
 
     # tmp_file = tempname() # THIS DOESNT WORK CAUSE TMP IS NOT SHARED ACROSS  NODES
     tmp_file     = package_dir*"/."*lstrip(tempname(),'/') # just put tmpfile in pkgdir
     tmp_file_dir = package_dir*"/."*lstrip(tempname(),'/') # just put tmpfile in pkgdir
+
+    dir_array = fill("",sz_tau)
 
     mkpath(dirname(tmp_file)) # make path if doesn't exist
     @info("tmpfile is :"*tmp_file)
@@ -102,21 +107,43 @@ function grid_search_optimize(;output_save_path=nothing,sysimage=false, save=tru
         # sleep(1) # make sure they get a different second in their job... since we dont use job_array_id in filename...
         # open later w/ r+ so as to not overwrite the old stuff, w+ opens a new array, r+	read, write	read = true, write = true
 
-        tau_weights = (;liq=tau_liq,ice=tau_ice)
-        output_root = Research_Schneider*"CliMa/Data/single_column/sensitivity/"*datetime_stamp*"/" *  rstrip(join([string(key)*"-"*string(val)*"__" for (key,val) in zip(keys(tau_weights), tau_weights)]),'_') *"/"
+
+        # maybe could do with expressions? say we pass in weights=(;a,b,c) and then evaluate eval(expr), expr = :(w^a + b*T^c) or something... will try on sampo I guess... will let tau_weights = (;weights, func_expr)
+        tau_weights = (; liq = (; liq_params = (;log10_tau_liq  = tau_liq), func_expr = :(10 .^ liq_params.log10_tau_liq) ), ice = (; ice_params = (;log10_tau_ice  = tau_ice), func_expr = :(10 .^ ice_params.log10_tau_ice) ) ) # expression for tau
+
+        # testing extra quotes from Base.shell_escape_posixly()
+        # tau_weights = "'(; liq = (; liq_params = (;log10_tau_liq  = $tau_liq), func_expr = :(10 .^ liq_params.log10_tau_liq) ), ice = (; ice_params = (;log10_tau_ice  = $tau_ice), func_expr = :(10 .^ ice_params.log10_tau_ice) ) )'" # expression for tau, test string version
+
+
+        tau_params = (;log10_tau_liq=tau_liq,log10_tau_ice=tau_ice) # for easy string interpolation below...
+        output_root = Research_Schneider*"CliMa/Data/single_column/sensitivity/"*datetime_stamp*"/" *  rstrip(join([string(key)*"-"*string(val)*"__" for (key,val) in zip(keys(tau_params), tau_params)]),'_') *"/" # problematic for this represenation with parentheses in expr
 
         @show(output_root)
 
-
+        # array version for tau_weights i think doesnt need the extra quotes (also for string maybe?)
         job_ID = sbatch_julia_expr("using Pkg; Pkg.activate(\\\"$package_dir\\\");include(\\\"$include_path\\\");loss = TrainTau.SOCRATES_loss(TrainTau.run_all_SOCRATES(;tau_weights = $tau_weights, output_root=\\\"$output_root\\\" )); @show(\\\"Writing loss \$loss to [$i,$j] in output array at $tmp_file.\\\"); @show(loss);
         using Mmap; io = open(\\\"$tmp_file\\\", \\\"r+\\\"); loss_array = mmap(io, Matrix{Float64}, $sz_tau); loss_array[$i,$j]=loss; @show(loss_array); Mmap.sync!(loss_array); close(io); ") # this has a problem where these jobs fill the queue and don't allow the actual runs to run, can we batch smaller somehow? maybe limit by # of pending jobs?
+
+        # # string version for tau_weights i think doesnt need the extra quotes (in a list so it doesnt get parsed into a long array)
+        # job_ID = sbatch_julia_expr("using Pkg; Pkg.activate(\\\"$package_dir\\\");include(\\\"$include_path\\\");loss = TrainTau.SOCRATES_loss(TrainTau.run_all_SOCRATES(;tau_weights = \"\"\"$tau_weights\"\"\", output_root=\\\"$output_root\\\" )); @show(\\\"Writing loss \$loss to [$i,$j] in output array at $tmp_file.\\\"); @show(loss);
+        # using Mmap; io = open(\\\"$tmp_file\\\", \\\"r+\\\"); loss_array = mmap(io, Matrix{Float64}, $sz_tau); loss_array[$i,$j]=loss; @show(loss_array); Mmap.sync!(loss_array); close(io); ") # this has a problem where these jobs fill the queue and don't allow the actual runs to run, can we batch smaller somehow? maybe limit by # of pending jobs?
+        
+        # # # named tuple version for tau_weights i think needs the extra quotes
+        # job_ID = sbatch_julia_expr("using Pkg; Pkg.activate(\\\"$package_dir\\\");include(\\\"$include_path\\\");loss = TrainTau.SOCRATES_loss(TrainTau.run_all_SOCRATES(;tau_weights = \\\"$tau_weights\\\", output_root=\\\"$output_root\\\" )); @show(\\\"Writing loss \$loss to [$i,$j] in output array at $tmp_file.\\\"); @show(loss);
+        # using Mmap; io = open(\\\"$tmp_file\\\", \\\"r+\\\"); loss_array = mmap(io, Matrix{Float64}, $sz_tau); loss_array[$i,$j]=loss; @show(loss_array); Mmap.sync!(loss_array); close(io); ") # this has a problem where these jobs fill the queue and don't allow the actual runs to run, can we batch smaller somehow? maybe limit by # of pending jobs?
         
         # # quick test func
         # job_ID = sbatch_julia_expr("using Pkg; Pkg.activate(\\\"$package_dir\\\");include(\\\"$include_path\\\");loss = rand();                                                                                    @show(\\\"Writing loss \$loss to [$i,$j] in output array at $tmp_file.\\\"); @show(loss);
         # using Mmap; io = open(\\\"$tmp_file\\\", \\\"r+\\\"); loss_array = mmap(io, Matrix{Float64}, $sz_tau); loss_array[$i,$j]=loss; @show(loss_array); Mmap.sync!(loss_array); close(io)") # this has a problem where these jobs fill the queue and don't allow the actual runs to run, can we batch smaller somehow? maybe limit by # of pending jobs?
         
+        dir_array[i,j] = strip(join([string(key)*"-"*string(val)*"__" for (key,val) in zip(keys(tau_params), (tau_liq, tau_ice))]),'_') *"/"
+        @show(dir_array)
+
         push!(pending_jobs, job_ID)
     end
+
+    # @show(tau_params)
+
 
     iter=0
     while length(pending_jobs) > 0 # wait for remaining jobs
@@ -149,8 +176,13 @@ function grid_search_optimize(;output_save_path=nothing,sysimage=false, save=tru
     rm(tmp_file)
 
     # dir_array = ((tau_liq, tau_ice) -> ((tau_weights)->Research_Schneider*"CliMa/Data/single_column/sensitivity/"*datetime_stamp*"/" *  rstrip(join([string(key)*"-"*string(val)*"__" for (key,val) in zip(keys(tau_weights), tau_weights)]),'_') *"/")((;liq=tau_liq,ice=tau_ice))).(tau.liq, tau.ice')
-    dir_array = ((tau_liq, tau_ice) -> ((tau_weights)->rstrip(join([string(key)*"-"*string(val)*"__" for (key,val) in zip(keys(tau_weights), tau_weights)]),'_') *"/")((;liq=tau_liq,ice=tau_ice))).(tau.liq, tau.ice') # i think we just need folder array but weve named it now anyway so could reconstruct but mayb this will be useful still idk...
+    # dir_array = ((tau_liq, tau_ice) -> ((tau_weights)->rstrip(join([string(key)*"-"*string(val)*"__" for (key,val) in zip(keys(tau_weights), tau_weights)]),'_') *"/")((;liq=tau_liq,ice=tau_ice))).(tau.liq, tau.ice') # i think we just need folder array but weve named it now anyway so could reconstruct but mayb this will be useful still idk...
 
+    # dir_array = ((tau_liq, tau_ice) -> ((tau_weights)->rstrip(join([string(key)*"-"*string(val)*"__" for (key,val) in zip(keys(tau_weights), tau_weights)]),'_') *"/")((;liq=tau_liq,ice=tau_ice))).(tau.liq, tau.ice') # i think we just need folder array but weve named it now anyway so could reconstruct but mayb this will be useful still idk...
+
+    # dir_array = ((tau_liq, tau_ice) -> ((tau_weights)->rstrip(join([string(key)*"-"*string(val)*"__" for (key,val) in zip(keys(tau_params), tau_weights)]),'_') *"/")((;liq=tau_liq,ice=tau_ice))).(tau.liq, tau.ice') # use what the folders where actually named with (tau_params)
+    # @show(tau_params)
+    # dir_array = ((tau_liq, tau_ice;tau_params) -> ((tau_weights;tau_params)->rstrip(join([string(key)*"-"*string(val)*"__" for (key,val) in zip(keys(tau_params), tau_weights)]),'_') *"/")((tau_liq, tau_ice);tau_params=tau_params)).(tau.liq, tau.ice'; tau_params=tau_params) # use what the folders where actually named with (tau_params)
 
     out = (;loss_array, dir_array, tau)
     
@@ -172,10 +204,6 @@ function grid_search_optimize(;output_save_path=nothing,sysimage=false, save=tru
 end
 
 # grid_search_optimize()
-
-
-
-
 
 
 
