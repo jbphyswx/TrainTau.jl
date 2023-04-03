@@ -1,4 +1,3 @@
-using Glob
 function post_process_folder(out_folder, tau, verbose=false, save=true)
     """ if we ran the model but didnt' save weights n stuff we should be able to recalculate them 
     - allow for self discovery later, for now let's say you have to give the weights you used
