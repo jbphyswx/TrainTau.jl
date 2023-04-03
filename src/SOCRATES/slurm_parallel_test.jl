@@ -125,7 +125,7 @@ function grid_search_optimize(;output_save_path=nothing,sysimage=false, save=tru
         @show(output_root)
 
         # array version for tau_weights i think doesnt need the extra quotes (also for string maybe?)
-        job_ID = sbatch_julia_expr("using Pkg; Pkg.activate(\\\"$package_dir\\\");include(\\\"$include_path\\\");loss = TrainTau.SOCRATES_loss(TrainTau.run_all_SOCRATES(;tau_weights = $tau_weights, output_root=\\\"$output_root\\\", forcing_type=$forcing_type )); @show(\\\"Writing loss \$loss to [$i,$j] in output array at $tmp_file.\\\"); @show(loss);
+        job_ID = sbatch_julia_expr("using Pkg; Pkg.activate(\\\"$package_dir\\\");include(\\\"$include_path\\\");loss = TrainTau.SOCRATES_loss(TrainTau.run_all_SOCRATES(;tau_weights = $tau_weights, output_root=\\\"$output_root\\\", forcing_type=\\\"$forcing_type\\\" )); @show(\\\"Writing loss \$loss to [$i,$j] in output array at $tmp_file.\\\"); @show(loss);
         using Mmap; io = open(\\\"$tmp_file\\\", \\\"r+\\\"); loss_array = mmap(io, Matrix{Float64}, $sz_tau); loss_array[$i,$j]=loss; @show(loss_array); Mmap.sync!(loss_array); close(io); ") # this has a problem where these jobs fill the queue and don't allow the actual runs to run, can we batch smaller somehow? maybe limit by # of pending jobs?
 
         # # string version for tau_weights i think doesnt need the extra quotes (in a list so it doesnt get parsed into a long array)
