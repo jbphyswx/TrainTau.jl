@@ -32,13 +32,16 @@ function grid_search_optimize(;output_save_path=nothing,sysimage=false, save=tru
 
 
     # Initialize Weights
-    res = 2 # test
-    res = 10
-    tau = (;liq=range(0.3,5,res), ice=range(0.3,5,res)) # log space weights
-    # tau = (;liq=[1], ice=[1]) # log space weights EQUIL 
+    # res = 10
+    # tau = (;liq=range(0.3,5,res), ice=range(0.3,5,res)) # log space weights
+    # # forcing_type = "obs_data" 
 
+    res = 1
+    tau = (;liq=[1], ice=[1]) # log space weights EQUIL 
+
+    # presumably we should only be running one of these... cause the losses are aggregated...    
     # forcing_type = "ERA5_data"
-    forcing_type = "obs_data" # presumably we should only be running one of these... cause the losses are aggregated...
+    forcing_type = "obs_data"
 
 
     sz_tau = (x->size(x)[1]).(values(tau)) 
@@ -82,8 +85,7 @@ function grid_search_optimize(;output_save_path=nothing,sysimage=false, save=tru
     pending_jobs = []
     job_limit = 20
     # job_limit = 15
-
-    # job_limit = 5
+    # job_limit = 5 # when is busy i guess (way too slow)
     for (i,tau_liq)=enumerate(tau.liq), (j,tau_ice)=enumerate(tau.ice)
         iter=0
         while length(pending_jobs) >= job_limit # if over job limit, just monitor

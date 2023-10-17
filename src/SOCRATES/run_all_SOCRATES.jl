@@ -36,6 +36,7 @@ function run_all_SOCRATES(;tau_weights=nothing, sysimage=false, truth=nothing, f
     
     for flight_number in flight_numbers
         case_name = "SOCRATES_RF"*string(flight_number,pad=2)*"_"*forcing_type
+
         # combined eq and one noneq default tau
         # setup_args_heirarchy = DataStructures.OrderedDict{Int,DataStructures.OrderedDict}(  # quick test
         # -1 => DataStructures.OrderedDict{String,Any}( "dtime" => [datetime_stamp], "skip_tests" => [true], "user_aux" => [(;tau_weights="\\\"" * tau_weights * "\\\"" )] ), # weight up here so don't go in name, escape so file can survive as string

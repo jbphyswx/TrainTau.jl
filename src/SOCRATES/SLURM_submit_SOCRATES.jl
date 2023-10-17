@@ -57,7 +57,6 @@ function slurm_submit(;setup_args_heirarchy::AbstractDict=DataStructures.Ordered
         "module load cuda/11.2",
         "module load openmpi/4.0.4_cuda-10.2",
         "module load cmake/3.10.2", # CUDA-aware MPI
-        #
         # "module load HDF5/1.8.19-mpich-3.2", # seems to be only sampo default
         # "module load netCDF/3.6.3-pgi-2017", # seems to be only sampo default
         # "module load openmpi/1.10.2/2017",  
@@ -68,12 +67,15 @@ function slurm_submit(;setup_args_heirarchy::AbstractDict=DataStructures.Ordered
         "export JULIA_DEPOT_PATH=$(CLIMA)/.julia_depot", # not sure why i commented this out, seems to lead to mpi binary has changed, please run pkg.build mpi...
         "export JULIA_MPI_BINARY=system", # does this cause a problem between nodes?
         "export JULIA_CUDA_USE_BINARYBUILDER=false",
+        # "julia --project=$(CLIMA) -e 'using MPIPreferences; MPIPreferences.use_system_binary()'",  # maybe do this here? to set our mpi_preferences
+        # "julia --project=$(CLIMA)/integration_tests -e 'using MPIPreferences; MPIPreferences.use_system_binary()'",  # maybe do this here? to set our mpi_preferences
         ]
     bash_commands_join = join(bash_commands,"; ")
 
     julia_precommands = [
         # "using Pkg",
         # "Pkg.develop(path=\"$(Research_Schneider)/CliMa/Thermodynamics.jl\")", # not sure what the right way to replace things is ... do this for the rampy though i could just use pow_icenuc i guess...
+        # "Pkg.develop(path=\"$(Research_Schneider)/CliMa/SOCRATESSingleColumnForcings.jl\")", # not sure what the right way to replace things is ... do this for the rampy though i could just use pow_icenuc i guess...
         # "Pkg.instantiate()",
         # "Pkg.precompile()",
         # "Pkg.build()", # not sure if this is necessary
@@ -233,7 +235,7 @@ function slurm_submit(;setup_args_heirarchy::AbstractDict=DataStructures.Ordered
 
         julia_command_options = join(args," ")
 
-
+        # run(`julia --project=$CLIMA) -e 'using MPIPreferences; MPIPreferences.use_system_binary()'`) # test setting MPI preferences this way for new MPIPreferences package
 
         full_command = "--wrap=\""*bash_commands_join*"; mpirun julia --color yes $julia_command_options\"" # this the jawn we needed on god https://stackoverflow.com/a/33402070, wrap means sbatch wraps the string inside a sh call which helps with interpreting esp special characters and strings..., # backticks means a call to shell too
         println(full_command); println("")
