@@ -42,8 +42,6 @@ function slurm_submit(;setup_args_heirarchy::AbstractDict=DataStructures.Ordered
     # edit so can call rebuild w/o the otehr arguments
     """
 
-    print("hiiii")
-
     ## ================================================================================================================ ##
     bash_commands = [ # usin raw so we dont have to escape all the dollar signs and brackets
         "echo running bash commands",
@@ -52,16 +50,6 @@ function slurm_submit(;setup_args_heirarchy::AbstractDict=DataStructures.Ordered
         # "set -x", # echo script line by line as it runs it
         "module purge",
         "module load julia/1.9.3", # rely on bashrc doesnt work, we gotta update this everytime we update julia...
-        "module load hdf5/1.10.1",
-        "module load netcdf-c/4.6.1",
-        "module load cuda/11.2",
-        "module load openmpi/4.0.4_cuda-10.2",
-        "module load cmake/3.10.2", # CUDA-aware MPI
-        # "module load HDF5/1.8.19-mpich-3.2", # seems to be only sampo default
-        # "module load netCDF/3.6.3-pgi-2017", # seems to be only sampo default
-        # "module load openmpi/1.10.2/2017",  
-        # "module load mpi/openmpi-x86_64",
-        #
         raw"export JULIA_NUM_THREADS=${SLURM_CPUS_PER_TASK:=1}",
         # "export JULIA_DEPOT_PATH=$(CLIMA)/.julia_depot", # not sure why i commented this out, seems to lead to mpi binary has changed, please run pkg.build mpi...
         "export JULIA_DEPOT_PATH=$(CLIMA)/.julia_depot", # not sure why i commented this out, seems to lead to mpi binary has changed, please run pkg.build mpi...
@@ -237,7 +225,7 @@ function slurm_submit(;setup_args_heirarchy::AbstractDict=DataStructures.Ordered
 
         # run(`julia --project=$CLIMA) -e 'using MPIPreferences; MPIPreferences.use_system_binary()'`) # test setting MPI preferences this way for new MPIPreferences package
 
-        full_command = "--wrap=\""*bash_commands_join*"; mpirun julia --color yes $julia_command_options\"" # this the jawn we needed on god https://stackoverflow.com/a/33402070, wrap means sbatch wraps the string inside a sh call which helps with interpreting esp special characters and strings..., # backticks means a call to shell too
+        full_command = "--wrap=\""*bash_commands_join*"; julia --color yes $julia_command_options\"" # this the jawn we needed on god https://stackoverflow.com/a/33402070, wrap means sbatch wraps the string inside a sh call which helps with interpreting esp special characters and strings..., # backticks means a call to shell too
         println(full_command); println("")
         processed_slurm_args = ["--"*k*"="*string(v) for (k,v) in slurm_args] #get into a nice list of strings like slurm requires...
 
