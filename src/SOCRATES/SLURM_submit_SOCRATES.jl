@@ -51,7 +51,7 @@ function slurm_submit(;setup_args_heirarchy::AbstractDict=DataStructures.Ordered
         "set -euo pipefail", # kill the job if anything fails
         # "set -x", # echo script line by line as it runs it
         "module purge",
-        "module load julia/1.8.5", # rely on bashrc doesnt work, we gotta update this everytime we update julia...
+        "module load julia/1.9.3", # rely on bashrc doesnt work, we gotta update this everytime we update julia...
         "module load hdf5/1.10.1",
         "module load netcdf-c/4.6.1",
         "module load cuda/11.2",
