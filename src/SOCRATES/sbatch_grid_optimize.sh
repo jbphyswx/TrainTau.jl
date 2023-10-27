@@ -6,7 +6,7 @@
 #SBATCH --mail-user=jbenjami@caltech.edu
 #SBATCH --mail-type=ALL
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:0
 #SBATCH --ntasks-per-node=1
 
 

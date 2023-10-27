@@ -28,7 +28,7 @@ default_slurm_args = Dict{String,Any}(
     "mail-user"=>"jbenjami@caltech.edu",
     "mail-type"=>"ALL",
     "ntasks"=>"1",
-    "gres"=>"gpu:1",
+    "gres"=>"gpu:0",
     "ntasks-per-node"=>"1",
 )
 
