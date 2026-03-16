@@ -1,8 +1,9 @@
 module TrainTau
 
+
 using Pkg
 Pkg.develop(path="/home/jbenjami/bin/git/SlurmTools.jl")
-Pkg.develop(path="/home/jbenjami/Research_Schneider/CliMa/TurbulenceConvection.jl")
+Pkg.develop(path="/home/jbenjami/clima_Research_Schneider/CliMA/TurbulenceConvection.jl")
 
 using Serialization
 using SlurmTools

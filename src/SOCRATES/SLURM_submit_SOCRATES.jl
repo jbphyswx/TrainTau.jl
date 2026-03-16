@@ -10,25 +10,25 @@
 # Pkg.develop(path="/home/jbenjami/bin/git/SlurmTools.jl") # not sure what the right way to replace things is ... # for some reason this line causes the installation of everything clima related into main... no idea why... needed for rebuild?
 # Pkg.build() # to get this slurmtools built in? otherwise we have to call activate to use it from TC.jl depots which is redundant with our local calls inside the runs...
 # using SlurmTools
-# Pkg.activate("/central/home/jbenjami/Research_Schneider/CliMa/TurbulenceConvection.jl/integration_tests/") # we need this to set an environment packages from that folder not in the main package, put after develop so that it isn't active when develop is called causing precompilation to fill up whatever environment we're in... (to do, move to rebuild only?) maybe it'll work fine from the activations in the bash calls... idk...
+# Pkg.activate("/central/home/jbenjami/clima_Research_Schneider/CliMA/TurbulenceConvection.jl/integration_tests/") # we need this to set an environment packages from that folder not in the main package, put after develop so that it isn't active when develop is called causing precompilation to fill up whatever environment we're in... (to do, move to rebuild only?) maybe it'll work fine from the activations in the bash calls... idk...
 
 
 
-Research_Schneider = "/home/jbenjami/Research_Schneider/"
-CLIMA=Research_Schneider*"CliMa/TurbulenceConvection.jl"
-in_script=Research_Schneider*"CliMa/jobs/single_column/single_column_test.jl" # not sure if redundant w/ project, hopefully is aight
+clima_Research_Schneider = "/home/jbenjami/clima_Research_Schneider/"
+CLIMA=clima_Research_Schneider*"CliMA/TurbulenceConvection.jl"
+in_script=clima_Research_Schneider*"CliMA/jobs/single_column/single_column_test.jl" # not sure if redundant w/ project, hopefully is aight
 
 # use a dict for easy editing...     |      can also do stuff like #SBATCH --array=17-23
 default_slurm_args = Dict{String,Any}(                                                                             
     "job-name"=>"single_column_test",
-    "output"=>Research_Schneider*"CliMa/jobs/out/single_column_test.out",
-    "nodes"=>"1",
+    "output"=>clima_Research_Schneider*"CliMA/jobs/out/single_column_test.out",
+    "nodes"=>"1", # doesn't seem to make a differnece it you put it or comment it out
     "mem"=>"10GB", # test cause some crashed in memory and charles doin in cmmit #1267
     "time"=>"05:59:00",
     "mail-user"=>"jbenjami@caltech.edu",
     "mail-type"=>"ALL",
     "ntasks"=>"1",
-    "gres"=>"gpu:1",
+    "gres"=>"gpu:0",
     "ntasks-per-node"=>"1",
 )
 
@@ -46,17 +46,17 @@ function slurm_submit(;setup_args_heirarchy::AbstractDict=DataStructures.Ordered
 
     ## ================================================================================================================ ##
     bash_commands = [ # usin raw so we dont have to escape all the dollar signs and brackets
-        "echo running bash commands",
+        "echo running bash commands clima_",
         "CLIMA=$(CLIMA)",
         "set -euo pipefail", # kill the job if anything fails
         # "set -x", # echo script line by line as it runs it
         "module purge",
         "module load julia/1.8.5", # rely on bashrc doesnt work, we gotta update this everytime we update julia...
-        "module load hdf5/1.10.1",
-        "module load netcdf-c/4.6.1",
-        "module load cuda/11.2",
-        "module load openmpi/4.0.4_cuda-10.2",
-        "module load cmake/3.10.2", # CUDA-aware MPI
+        # "module load hdf5/1.10.1",
+        # "module load netcdf-c/4.6.1",
+        "module load cuda/julia-pref",
+        "module load openmpi/4.1.5-cudax",
+        # "module load cmake/3.10.2", # CUDA-aware MPI
         # "module load HDF5/1.8.19-mpich-3.2", # seems to be only sampo default
         # "module load netCDF/3.6.3-pgi-2017", # seems to be only sampo default
         # "module load openmpi/1.10.2/2017",  
@@ -74,8 +74,8 @@ function slurm_submit(;setup_args_heirarchy::AbstractDict=DataStructures.Ordered
 
     julia_precommands = [
         # "using Pkg",
-        # "Pkg.develop(path=\"$(Research_Schneider)/CliMa/Thermodynamics.jl\")", # not sure what the right way to replace things is ... do this for the rampy though i could just use pow_icenuc i guess...
-        # "Pkg.develop(path=\"$(Research_Schneider)/CliMa/SOCRATESSingleColumnForcings.jl\")", # not sure what the right way to replace things is ... do this for the rampy though i could just use pow_icenuc i guess...
+        # "Pkg.develop(path=\"$(clima_Research_Schneider)/CliMA/Thermodynamics.jl\")", # not sure what the right way to replace things is ... do this for the rampy though i could just use pow_icenuc i guess...
+        # "Pkg.develop(path=\"$(clima_Research_Schneider)/CliMA/SOCRATESSingleColumnForcings.jl\")", # not sure what the right way to replace things is ... do this for the rampy though i could just use pow_icenuc i guess...
         # "Pkg.instantiate()",
         # "Pkg.precompile()",
         # "Pkg.build()", # not sure if this is necessary
@@ -160,7 +160,7 @@ function slurm_submit(;setup_args_heirarchy::AbstractDict=DataStructures.Ordered
         name       = replace(string(name),(["user_args-",].=>"")...)
 
         if isnothing(get(setup, "output_root", nothing)) # could be one ternary operator I guesss, but if missing
-            outdir=Research_Schneider*"CliMa/Data/single_column/sensitivity/"*setup["dtime"]*"/" # gotta do something about dtime here... (and allow specified directories)
+            outdir=clima_Research_Schneider*"CliMA/Data/single_column/sensitivity/"*setup["dtime"]*"/" # gotta do something about dtime here... (and allow specified directories)
         else
             outdir = setup["output_root"]
         end

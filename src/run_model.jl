@@ -2,7 +2,7 @@
 Runs TC.jl with the given parameters
 """
 
-Pkg.develop(path="/home/jbenjami/Research_Schneider/CliMa/TurbulenceConvection.jl") # use local version
+Pkg.develop(path="/home/jbenjami/clima_Research_Schneider/CliMA/TurbulenceConvection.jl") # use local version
 using TurbulenceConvection
 
 function run_model(tau_func::Function, tau_params::Namedtuple)

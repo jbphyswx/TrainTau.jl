@@ -45,23 +45,23 @@ function run_all_SOCRATES(;tau_weights=nothing, sysimage=false, truth=nothing, f
         # )
 
         # @show(kwargs)
-        output_root = (:output_root in keys(kwargs)) ? kwargs[:output_root] : error("test") #Research_Schneider*"CliMa/Data/single_column/sensitivity/"*datetime_stamp*"/"
+        output_root = (:output_root in keys(kwargs)) ? kwargs[:output_root] : error("test") #clima_Research_Schneider*"CliMA/Data/single_column/sensitivity/"*datetime_stamp*"/"
 
 
-        # # Non_Eq explorer
-        # setup_args_heirarchy = DataStructures.OrderedDict{Int,DataStructures.OrderedDict}(  # quick test, add output_root to force all our runs into one folder for storage (maybe this will break sumn later?)
-        # -1 => DataStructures.OrderedDict{String,Any}( "dtime" => [datetime_stamp], "skip_tests" => [true], "user_aux" => [(;tau_weights=tau_weights )], "output_root" => [output_root]), # weight up here so don't go in name, escape so file can survive as string
-        # 0  => DataStructures.OrderedDict{String,Any}( "case" => [case_name], "moisture_model" => ["nonequilibrium",], "precipitation_model" => ["clima_1m"], "sgs" => ["mean"], "dt" => [.5], "t_max" => [t_max], ), # can also be ["adapt"] for adaptive timestep
-        # 1  => DataStructures.OrderedDict{String,Any}( "user_args" => [(;use_ramp=false, use_supersat=true)] )
-        # )
-
-
-        # Eq comparison w/ ramp
+        # Non_Eq explorer
         setup_args_heirarchy = DataStructures.OrderedDict{Int,DataStructures.OrderedDict}(  # quick test, add output_root to force all our runs into one folder for storage (maybe this will break sumn later?)
-        -1 => DataStructures.OrderedDict{String,Any}( "dtime" => [datetime_stamp], "skip_tests" => [true], "user_aux" => [(;)], "output_root" => [output_root]), # weight up here so don't go in name, escape so file can survive as string
-        0  => DataStructures.OrderedDict{String,Any}( "case" => [case_name], "moisture_model" => ["equilibrium",], "precipitation_model" => ["clima_1m"], "sgs" => ["mean"], "dt" => [.5], "t_max" => [t_max], ), # can also be ["adapt"] for adaptive timestep
-        1  => DataStructures.OrderedDict{String,Any}( "user_args" => [(;use_ramp=true, use_supersat=false)] )
+        -1 => DataStructures.OrderedDict{String,Any}( "dtime" => [datetime_stamp], "skip_tests" => [true], "user_aux" => [(;tau_weights=tau_weights )], "output_root" => [output_root]), # weight up here so don't go in name, escape so file can survive as string
+        0  => DataStructures.OrderedDict{String,Any}( "case" => [case_name], "moisture_model" => ["nonequilibrium",], "precipitation_model" => ["clima_1m"], "sgs" => ["mean"], "dt" => [.5], "t_max" => [t_max], ), # can also be ["adapt"] for adaptive timestep
+        1  => DataStructures.OrderedDict{String,Any}( "user_args" => [(;use_ramp=false, use_supersat=true)] )
         )
+
+
+        # # Eq comparison w/ ramp
+        # setup_args_heirarchy = DataStructures.OrderedDict{Int,DataStructures.OrderedDict}(  # quick test, add output_root to force all our runs into one folder for storage (maybe this will break sumn later?)
+        # -1 => DataStructures.OrderedDict{String,Any}( "dtime" => [datetime_stamp], "skip_tests" => [true], "user_aux" => [(;)], "output_root" => [output_root]), # weight up here so don't go in name, escape so file can survive as string
+        # 0  => DataStructures.OrderedDict{String,Any}( "case" => [case_name], "moisture_model" => ["equilibrium",], "precipitation_model" => ["clima_1m"], "sgs" => ["mean"], "dt" => [.5], "t_max" => [t_max], ), # can also be ["adapt"] for adaptive timestep
+        # 1  => DataStructures.OrderedDict{String,Any}( "user_args" => [(;use_ramp=true, use_supersat=false)] )
+        # )
 
 
         # # force w/ real N_L, let N_I vary I guess (N_0 has format (; z, values) for each flight number), get N_0 from kwargs...

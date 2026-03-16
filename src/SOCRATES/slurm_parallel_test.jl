@@ -32,16 +32,15 @@ function grid_search_optimize(;output_save_path=nothing,sysimage=false, save=tru
 
 
     # Initialize Weights
-    # res = 10
-    # tau = (;liq=range(0.3,5,res), ice=range(0.3,5,res)) # log space weights
-    # # forcing_type = "obs_data" 
+    res = 10
+    tau = (;liq=range(0.3,5,res), ice=range(0.3,5,res)) # log space weights
 
-    res = 1
-    tau = (;liq=[1], ice=[1]) # log space weights EQUIL 
+    # res = 1
+    # tau = (;liq=[1], ice=[1]) # log space weights EQUIL 
 
     # presumably we should only be running one of these... cause the losses are aggregated...    
-    # forcing_type = "ERA5_data"
-    forcing_type = "obs_data"
+    forcing_type = "ERA5_data"
+    # forcing_type = "obs_data"
 
 
     sz_tau = (x->size(x)[1]).(values(tau)) 
@@ -72,19 +71,22 @@ function grid_search_optimize(;output_save_path=nothing,sysimage=false, save=tru
     @show(datetime_stamp)
 
     if isnothing(output_save_path)
-        output_save_path = Research_Schneider*"CliMa/Data/single_column/sensitivity/"*datetime_stamp*"/"*"grid_search_log.out"
-        output_save_path_pkl = Research_Schneider*"CliMa/Data/single_column/sensitivity/"*datetime_stamp*"/"*"grid_search_log.out.pkl"
+        output_save_path = clima_Research_Schneider*"CliMA/Data/single_column/sensitivity/"*datetime_stamp*"/"*"grid_search_log.out"
+        output_save_path_pkl = clima_Research_Schneider*"CliMA/Data/single_column/sensitivity/"*datetime_stamp*"/"*"grid_search_log.out.pkl"
 
         @info("output_save_path: "*output_save_path)
     end
 
     include_path = joinpath(package_dir, "src", "TrainTau.jl")
+    @info(package_dir)
+
 
     # iterate functions
 
     pending_jobs = []
-    job_limit = 20
-    # job_limit = 15
+    # job_limit = 20
+    # job_limit = 13 # testing  if i can not request whole node
+    job_limit = 9 # only 64 nodes on clima cluster and this fills it so fine 1 launcher + 9 runners is limit + (9*6=54) = 54+10 = 64
     # job_limit = 5 # when is busy i guess (way too slow)
     for (i,tau_liq)=enumerate(tau.liq), (j,tau_ice)=enumerate(tau.ice)
         iter=0
@@ -122,24 +124,24 @@ function grid_search_optimize(;output_save_path=nothing,sysimage=false, save=tru
 
 
         tau_params = (;log10_tau_liq=tau_liq,log10_tau_ice=tau_ice) # for easy string interpolation below...
-        output_root = Research_Schneider*"CliMa/Data/single_column/sensitivity/"*datetime_stamp*"/" *  rstrip(join([string(key)*"-"*string(val)*"__" for (key,val) in zip(keys(tau_params), tau_params)]),'_') *"/" # problematic for this represenation with parentheses in expr
+        output_root = clima_Research_Schneider*"CliMA/Data/single_column/sensitivity/"*datetime_stamp*"/" *  rstrip(join([string(key)*"-"*string(val)*"__" for (key,val) in zip(keys(tau_params), tau_params)]),'_') *"/" # problematic for this represenation with parentheses in expr
 
         @show(output_root)
 
         # array version for tau_weights i think doesnt need the extra quotes (also for string maybe?)
-        job_ID = sbatch_julia_expr("using Pkg; Pkg.activate(\\\"$package_dir\\\");include(\\\"$include_path\\\");loss = TrainTau.SOCRATES_loss(TrainTau.run_all_SOCRATES(;tau_weights = $tau_weights, output_root=\\\"$output_root\\\", forcing_type=\\\"$forcing_type\\\" )); @show(\\\"Writing loss \$loss to [$i,$j] in output array at $tmp_file.\\\"); @show(loss);
+        job_ID = SlurmTools.sbatch_julia_expr_clima("using Pkg; Pkg.activate(\\\"$package_dir\\\");include(\\\"$include_path\\\");loss = TrainTau.SOCRATES_loss(TrainTau.run_all_SOCRATES(;tau_weights = $tau_weights, output_root=\\\"$output_root\\\", forcing_type=\\\"$forcing_type\\\" )); @show(\\\"Writing loss \$loss to [$i,$j] in output array at $tmp_file.\\\"); @show(loss);
         using Mmap; io = open(\\\"$tmp_file\\\", \\\"r+\\\"); loss_array = mmap(io, Matrix{Float64}, $sz_tau); loss_array[$i,$j]=loss; @show(loss_array); Mmap.sync!(loss_array); close(io); ") # this has a problem where these jobs fill the queue and don't allow the actual runs to run, can we batch smaller somehow? maybe limit by # of pending jobs?
 
         # # string version for tau_weights i think doesnt need the extra quotes (in a list so it doesnt get parsed into a long array)
-        # job_ID = sbatch_julia_expr("using Pkg; Pkg.activate(\\\"$package_dir\\\");include(\\\"$include_path\\\");loss = TrainTau.SOCRATES_loss(TrainTau.run_all_SOCRATES(;tau_weights = \"\"\"$tau_weights\"\"\", output_root=\\\"$output_root\\\" )); @show(\\\"Writing loss \$loss to [$i,$j] in output array at $tmp_file.\\\"); @show(loss);
+        # job_ID = sbatch_julia_expr_clima("using Pkg; Pkg.activate(\\\"$package_dir\\\");include(\\\"$include_path\\\");loss = TrainTau.SOCRATES_loss(TrainTau.run_all_SOCRATES(;tau_weights = \"\"\"$tau_weights\"\"\", output_root=\\\"$output_root\\\" )); @show(\\\"Writing loss \$loss to [$i,$j] in output array at $tmp_file.\\\"); @show(loss);
         # using Mmap; io = open(\\\"$tmp_file\\\", \\\"r+\\\"); loss_array = mmap(io, Matrix{Float64}, $sz_tau); loss_array[$i,$j]=loss; @show(loss_array); Mmap.sync!(loss_array); close(io); ") # this has a problem where these jobs fill the queue and don't allow the actual runs to run, can we batch smaller somehow? maybe limit by # of pending jobs?
         
         # # # named tuple version for tau_weights i think needs the extra quotes
-        # job_ID = sbatch_julia_expr("using Pkg; Pkg.activate(\\\"$package_dir\\\");include(\\\"$include_path\\\");loss = TrainTau.SOCRATES_loss(TrainTau.run_all_SOCRATES(;tau_weights = \\\"$tau_weights\\\", output_root=\\\"$output_root\\\" )); @show(\\\"Writing loss \$loss to [$i,$j] in output array at $tmp_file.\\\"); @show(loss);
+        # job_ID = sbatch_julia_expr_clima("using Pkg; Pkg.activate(\\\"$package_dir\\\");include(\\\"$include_path\\\");loss = TrainTau.SOCRATES_loss(TrainTau.run_all_SOCRATES(;tau_weights = \\\"$tau_weights\\\", output_root=\\\"$output_root\\\" )); @show(\\\"Writing loss \$loss to [$i,$j] in output array at $tmp_file.\\\"); @show(loss);
         # using Mmap; io = open(\\\"$tmp_file\\\", \\\"r+\\\"); loss_array = mmap(io, Matrix{Float64}, $sz_tau); loss_array[$i,$j]=loss; @show(loss_array); Mmap.sync!(loss_array); close(io); ") # this has a problem where these jobs fill the queue and don't allow the actual runs to run, can we batch smaller somehow? maybe limit by # of pending jobs?
         
         # # quick test func
-        # job_ID = sbatch_julia_expr("using Pkg; Pkg.activate(\\\"$package_dir\\\");include(\\\"$include_path\\\");loss = rand();                                                                                    @show(\\\"Writing loss \$loss to [$i,$j] in output array at $tmp_file.\\\"); @show(loss);
+        # job_ID = sbatch_julia_expr_clima("using Pkg; Pkg.activate(\\\"$package_dir\\\");include(\\\"$include_path\\\");loss = rand();                                                                                    @show(\\\"Writing loss \$loss to [$i,$j] in output array at $tmp_file.\\\"); @show(loss);
         # using Mmap; io = open(\\\"$tmp_file\\\", \\\"r+\\\"); loss_array = mmap(io, Matrix{Float64}, $sz_tau); loss_array[$i,$j]=loss; @show(loss_array); Mmap.sync!(loss_array); close(io)") # this has a problem where these jobs fill the queue and don't allow the actual runs to run, can we batch smaller somehow? maybe limit by # of pending jobs?
         
         dir_array[i,j] = strip(join([string(key)*"-"*string(val)*"__" for (key,val) in zip(keys(tau_params), (tau_liq, tau_ice))]),'_') *"/"
@@ -181,7 +183,7 @@ function grid_search_optimize(;output_save_path=nothing,sysimage=false, save=tru
     close(io)
     rm(tmp_file)
 
-    # dir_array = ((tau_liq, tau_ice) -> ((tau_weights)->Research_Schneider*"CliMa/Data/single_column/sensitivity/"*datetime_stamp*"/" *  rstrip(join([string(key)*"-"*string(val)*"__" for (key,val) in zip(keys(tau_weights), tau_weights)]),'_') *"/")((;liq=tau_liq,ice=tau_ice))).(tau.liq, tau.ice')
+    # dir_array = ((tau_liq, tau_ice) -> ((tau_weights)->clima_Research_Schneider*"CliMA/Data/single_column/sensitivity/"*datetime_stamp*"/" *  rstrip(join([string(key)*"-"*string(val)*"__" for (key,val) in zip(keys(tau_weights), tau_weights)]),'_') *"/")((;liq=tau_liq,ice=tau_ice))).(tau.liq, tau.ice')
     # dir_array = ((tau_liq, tau_ice) -> ((tau_weights)->rstrip(join([string(key)*"-"*string(val)*"__" for (key,val) in zip(keys(tau_weights), tau_weights)]),'_') *"/")((;liq=tau_liq,ice=tau_ice))).(tau.liq, tau.ice') # i think we just need folder array but weve named it now anyway so could reconstruct but mayb this will be useful still idk...
 
     # dir_array = ((tau_liq, tau_ice) -> ((tau_weights)->rstrip(join([string(key)*"-"*string(val)*"__" for (key,val) in zip(keys(tau_weights), tau_weights)]),'_') *"/")((;liq=tau_liq,ice=tau_ice))).(tau.liq, tau.ice') # i think we just need folder array but weve named it now anyway so could reconstruct but mayb this will be useful still idk...
